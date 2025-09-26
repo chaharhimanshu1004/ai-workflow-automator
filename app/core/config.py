@@ -4,6 +4,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
+    MIGRATION_DATABASE_URL: str
+    
 
     class Config:
         env_file = ".env"
