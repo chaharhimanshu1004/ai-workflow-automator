@@ -13,10 +13,10 @@ router = APIRouter()
 GOOGLE_TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo"
 
 @router.post('/auth/google')
-def google_signin(token: GoogleTokenRequest, db: Session = Depends(get_db)):
-    print('->>>>>>>req comes with payload', payload)
+async def google_signin(request: Request, db: Session = Depends(get_db)):
+    body = await request.json()
+    token = body["token"]
     resp = requests.get(GOOGLE_TOKEN_INFO_URL, params={"id_token": token})
-    print('---------response', resp)
     if(resp.status_code != 200):
         raise HTTPException(status_code=401, detail="Invalid Google token")
     data = resp.json()
@@ -35,5 +35,4 @@ def google_signin(token: GoogleTokenRequest, db: Session = Depends(get_db)):
 
     payload = { "sub": str(user.user_id), "email": user.email }
     access_token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    print('-------access_token', access_token)
     return { "access_token": access_token, "token_type": "bearer" }
