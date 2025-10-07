@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.api.routes import workflow
 from app.api.routes import user
+from app.api.routes import credentials
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 load_dotenv()
@@ -17,6 +18,7 @@ app.add_middleware(
 
 app.include_router(workflow.router)
 app.include_router(user.router)
+app.include_router(credentials.router)
 
 @app.get("/health")
 def health_check():
