@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.schemas.workflow import WorkflowOut, WorkflowBase
+from app.schemas.workflow import WorkflowOut, WorkflowBase, UpdateWorkflow
 from app.api.deps import get_db
 from app.crud import workflow as crud_workflow
 from app.core.security import get_current_user
@@ -27,6 +27,26 @@ def create_workflow(workflow_in: WorkflowBase, db:Session = Depends(get_db), use
         user_id=user_id,
         title=workflow_in.title,
         enabled=workflow_in.enabled,
+        nodes=workflow_in.nodes,
+        connections=workflow_in.connections
+    )
+
+@router.get("/workflow/{workflow_id}", response_model=WorkflowOut)
+def read_workflow_by_id(
+    workflow_id: str,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user)
+):
+    workflow = crud_workflow.get_workflow(db, workflow_id=workflow_id, user_id=user_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    return workflow
+
+@router.put("/workflow/{workflow_id}", response_model=WorkflowOut)
+def update_workflow_by_id(workflow_in: UpdateWorkflow, db:Session = Depends(get_db), user_id: str = Depends(get_current_user)):
+    return crud_workflow.update_workflow(
+        db,
+        user_id=user_id,
         nodes=workflow_in.nodes,
         connections=workflow_in.connections
     )

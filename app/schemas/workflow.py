@@ -15,3 +15,7 @@ class WorkflowOut(WorkflowBase):
 
     class Config:
         orm_mode = True
+
+class UpdateWorkflow(BaseModel):
+    nodes: Any
+    connections: Any
