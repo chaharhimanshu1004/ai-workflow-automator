@@ -43,9 +43,10 @@ def read_workflow_by_id(
     return workflow
 
 @router.put("/workflow/{workflow_id}", response_model=WorkflowOut)
-def update_workflow_by_id(workflow_in: UpdateWorkflow, db:Session = Depends(get_db), user_id: str = Depends(get_current_user)):
+def update_workflow_by_id(workflow_id: str, workflow_in: UpdateWorkflow, db:Session = Depends(get_db), user_id: str = Depends(get_current_user)):
     return crud_workflow.update_workflow(
         db,
+        workflow_id=workflow_id,
         user_id=user_id,
         nodes=workflow_in.nodes,
         connections=workflow_in.connections
