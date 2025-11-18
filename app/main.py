@@ -4,6 +4,7 @@ from app.api.routes import user
 from app.api.routes import credentials
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.routes import oauth
 load_dotenv()
 
 app = FastAPI(title="AI Workflow Automator")
@@ -19,6 +20,7 @@ app.add_middleware(
 app.include_router(workflow.router)
 app.include_router(user.router)
 app.include_router(credentials.router)
+app.include_router(oauth.router)
 
 @app.get("/health")
 def health_check():

@@ -11,3 +11,7 @@ router = APIRouter()
 @router.post("/save-creds")
 def save_creds(credential: CredentialCreate, db: Session = Depends(get_db), user_id: str = Depends(get_current_user)):
     return crud_credentials.save_creds(db, user_id, credential.title, credential.platform, credential.data)
+
+@router.get("/credentials")
+def get_credentials(db: Session = Depends(get_db),user_id: str = Depends(get_current_user)):
+    return crud_credentials.get_user_credentials(db, user_id=user_id)
