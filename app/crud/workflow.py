@@ -52,3 +52,14 @@ def update_workflow(db: Session, workflow_id: str, user_id: str, nodes: dict = N
     
     return workflow
 
+def delete_workflow(db: Session, workflow_id: str, user_id: str):
+    workflow = db.query(Workflow).filter(
+        Workflow.id == workflow_id,
+        Workflow.user_id == user_id
+    ).first()
+    if not workflow:
+        return False
+    db.delete(workflow)
+    db.commit()
+    return True
+

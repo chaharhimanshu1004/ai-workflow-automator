@@ -39,3 +39,14 @@ def get_user_credentials(db: Session, user_id: str):
         }
         for r in results
     ]
+
+def delete_credential(db: Session, credential_id: str, user_id: str):
+    credential = db.query(Credential).filter(
+        Credential.id == credential_id,
+        Credential.user_id == user_id
+    ).first()
+    if not credential:
+        return False
+    db.delete(credential)
+    db.commit()
+    return True

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -15,3 +15,14 @@ def save_creds(credential: CredentialCreate, db: Session = Depends(get_db), user
 @router.get("/credentials")
 def get_credentials(db: Session = Depends(get_db),user_id: str = Depends(get_current_user)):
     return crud_credentials.get_user_credentials(db, user_id=user_id)
+
+@router.delete("/credentials/{credential_id}", response_model=dict)
+def delete_credential(
+    credential_id: str,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user)
+):
+    deleted = crud_credentials.delete_credential(db, credential_id, user_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Credential not found or not authorized")
+    return {"detail": "Credential deleted successfully"}

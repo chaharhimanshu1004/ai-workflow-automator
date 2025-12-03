@@ -51,3 +51,14 @@ def update_workflow_by_id(workflow_id: str, workflow_in: UpdateWorkflow, db:Sess
         nodes=workflow_in.nodes,
         connections=workflow_in.connections
     )
+
+@router.delete("/workflow/{workflow_id}", response_model=dict)
+def delete_workflow_by_id(
+    workflow_id: str,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user)
+):
+    deleted = crud_workflow.delete_workflow(db, workflow_id=workflow_id, user_id=user_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Workflow not found or not authorized")
+    return {"detail": "Workflow deleted successfully"}
