@@ -82,3 +82,84 @@ def get_trigger_types():
     ]
     return trigger_types
 
+@router.get("/action-types")
+def get_action_types():
+    # returning dummy data
+    return [
+        {
+            "id": "telegram-api",
+            "label": "Telegram API",
+            "color": "#0088CC",
+            "description": "Send a message via Telegram",
+            "configFields": [
+                {
+                    "type": "text",
+                    "label": "Chat ID",
+                    "placeholder": "Enter recipient chat ID",
+                    "required": True,
+                    "key": "chatId"
+                },
+                {
+                    "type": "textarea",
+                    "label": "Message",
+                    "placeholder": "Enter your message",
+                    "required": True,
+                    "key": "message"
+                }
+            ]
+        },
+        {
+            "id": "email-send",
+            "label": "Email Send",
+            "color": "#EF4444",
+            "description": "Send an email to recipients",
+            "configFields": [
+                {
+                    "type": "email",
+                    "label": "Recipient",
+                    "placeholder": "recipient@example.com",
+                    "required": True,
+                    "key": "to"
+                },
+                {
+                    "type": "text",
+                    "label": "Subject",
+                    "placeholder": "Email subject",
+                    "required": True,
+                    "key": "subject"
+                },
+                {
+                    "type": "textarea",
+                    "label": "Body",
+                    "placeholder": "Email content",
+                    "required": True,
+                    "key": "body"
+                }
+            ]
+        },
+        {
+            "id": "gemini",
+            "label": "Gemini",
+            "color": "#6366F1",
+            "description": "Use Gemini to generate content",
+            "configFields": [
+                {
+                    "type": "text",
+                    "label": "Prompt",
+                    "placeholder": "Enter your prompt or query",
+                    "required": True,
+                    "key": "prompt"
+                },
+                {
+                    "type": "select",
+                    "label": "Model",
+                    "required": True,
+                    "options": [
+                        { "label": "Gemini-2", "value": "gemini2" },
+                        { "label": "Gemini-2.5", "value": "gemini2.5" }
+                    ],
+                    "key": "model"
+                }
+            ]
+        }
+    ]
