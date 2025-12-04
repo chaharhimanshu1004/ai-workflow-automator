@@ -62,3 +62,23 @@ def delete_workflow_by_id(
     if not deleted:
         raise HTTPException(status_code=404, detail="Workflow not found or not authorized")
     return {"detail": "Workflow deleted successfully"}
+
+@router.get("/trigger-types")
+def get_trigger_types():
+    # returning dummy data 
+    trigger_types = [
+        {
+            "id": 'MANUAL',
+            "label": 'Manual Trigger',
+            "color": '#10B981',
+            "description": 'Triggered manually by the user',
+        },
+        {
+            "id": 'FORM',
+            "label": 'Form Submission',
+            "color": '#3B82F6',
+            "description": 'Triggered when a form is submitted',
+        },
+    ]
+    return trigger_types
+
