@@ -9,7 +9,7 @@ from app.schemas.auth import GoogleTokenRequest
 from app.models.token import Token
 import requests
 
-router = APIRouter()
+router = APIRouter(prefix="/user")
 
 GOOGLE_TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo"
 
@@ -45,7 +45,7 @@ async def google_signin(request: Request, db: Session = Depends(get_db)):
     db.commit()
     return { "access_token": access_token, "token_type": "bearer" }
 
-@router.get('/user/profile')
+@router.get('/profile')
 async def get_user_profile(request: Request, db: Session = Depends(get_db)):
     authorization: str = request.headers.get("Authorization")
     if not authorization:

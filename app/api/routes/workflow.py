@@ -7,10 +7,10 @@ from app.api.deps import get_db
 from app.crud import workflow as crud_workflow
 from app.core.security import get_current_user
 
-router = APIRouter()
+router = APIRouter(prefix="/workflow")
 
 # Get workflow API 
-@router.get("/workflow", response_model=List[WorkflowOut])
+@router.get("/", response_model=List[WorkflowOut])
 def read_workflows(
     skip: int = 0,
     limit: int = 100,
@@ -20,7 +20,7 @@ def read_workflows(
     return crud_workflow.get_user_workflows(db, user_id=user_id, skip=skip, limit=limit)
 
 # Create workflow API
-@router.post("/create-workflow", response_model=WorkflowOut)
+@router.post("/create", response_model=WorkflowOut)
 def create_workflow(workflow_in: WorkflowBase, db:Session = Depends(get_db), user_id: str = Depends(get_current_user)):
     return crud_workflow.create_workflow(
         db,
@@ -31,7 +31,7 @@ def create_workflow(workflow_in: WorkflowBase, db:Session = Depends(get_db), use
         connections=workflow_in.connections
     )
 
-@router.get("/workflow/{workflow_id}", response_model=WorkflowOut)
+@router.get("/{workflow_id}", response_model=WorkflowOut)
 def read_workflow_by_id(
     workflow_id: str,
     db: Session = Depends(get_db),
@@ -42,7 +42,7 @@ def read_workflow_by_id(
         raise HTTPException(status_code=404, detail="Workflow not found")
     return workflow
 
-@router.put("/workflow/{workflow_id}", response_model=WorkflowOut)
+@router.put("/{workflow_id}", response_model=WorkflowOut)
 def update_workflow_by_id(workflow_id: str, workflow_in: UpdateWorkflow, db:Session = Depends(get_db), user_id: str = Depends(get_current_user)):
     return crud_workflow.update_workflow(
         db,
@@ -52,7 +52,7 @@ def update_workflow_by_id(workflow_id: str, workflow_in: UpdateWorkflow, db:Sess
         connections=workflow_in.connections
     )
 
-@router.delete("/workflow/{workflow_id}", response_model=dict)
+@router.delete("/{workflow_id}", response_model=dict)
 def delete_workflow_by_id(
     workflow_id: str,
     db: Session = Depends(get_db),

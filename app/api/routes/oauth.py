@@ -9,7 +9,7 @@ from app.api.deps import get_db
 from app.core.security import get_current_user
 from app.crud import credentials as crud_credentials
 
-router = APIRouter()
+router = APIRouter(prefix="/oauth")
 
 # Gmail OAuth configuration
 GMAIL_CLIENT_ID = os.getenv("GMAIL_CLIENT_ID")
@@ -17,7 +17,7 @@ GMAIL_CLIENT_SECRET = os.getenv("GMAIL_CLIENT_SECRET")
 GMAIL_REDIRECT_URI = os.getenv("GMAIL_REDIRECT_URI")
 GMAIL_SCOPES = "https://www.googleapis.com/auth/gmail.send"
 
-@router.get("/oauth/gmail/authorize")
+@router.get("/gmail/authorize")
 def gmail_oauth_authorize(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user)
@@ -41,7 +41,7 @@ def gmail_oauth_authorize(
     
     return {"auth_url": auth_url}
 
-@router.post("/oauth/gmail/callback")
+@router.post("/gmail/callback")
 def gmail_oauth_callback(
     callback_data: dict,
     db: Session = Depends(get_db),
