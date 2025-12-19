@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app.crud.credentials import get_credential_by_platform
 import json
+import re
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -87,24 +88,89 @@ class WorkflowExecutor:
             logger.warning("Cycle detected in workflow graph or disconnected components not reachable.")
             
         return execution_order
+    def _resolve_variables(self, value: Any, context: Dict[str, Any]) -> Any:
+        """
+        Recursively resolves string variables in the format {{nodeId.path.to.value}}
+        using the provided context dictionary.
+        """
+        if isinstance(value, str):
+            # Regex to find {{...}} patterns
+            pattern = r"\{\{(.*?)\}\}"
+            matches = re.findall(pattern, value)
+            
+            if not matches:
+                return value
+            
+            for match in matches:
+                key = match.strip()
+                resolved_val = self._get_value_from_context(key, context)
+                
+                # If the entire string is just the variable, return the type-preserved value
+                if value == f"{{{{{match}}}}}":
+                    return resolved_val
+                
+                # Smart Stringification for interpolation
+                replacement_str = str(resolved_val)
+                if isinstance(resolved_val, dict):
+                    # Try to extract meaningful text content if available
+                    if 'text' in resolved_val:
+                        replacement_str = str(resolved_val['text'])
+                    elif 'output' in resolved_val:
+                        replacement_str = str(resolved_val['output'])
+                    # If specific paths were requested (handled by get_value), we won't be here with a full dict usually,
+                    # Unless the user asked for {{node.output}} and output is a dict.
+                
+                value = value.replace(f"{{{{{match}}}}}", replacement_str)
+            return value
+        
+        elif isinstance(value, dict):
+            return {k: self._resolve_variables(v, context) for k, v in value.items()}
+        elif isinstance(value, list):
+            return [self._resolve_variables(v, context) for v in value]
+        else:
+            return value
 
-    def execute_node(self, node: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_value_from_context(self, path: str, context: Dict[str, Any]) -> Any:
+        """
+        Traverses the dot-separated path in the context dictionary.
+        """
+        parts = path.split('.')
+        current = context
+        
+        try:
+            for part in parts:
+                if isinstance(current, dict):
+                    current = current.get(part)
+                else:
+                    logger.warning(f"Path traversal failed at part '{part}' for path '{path}'")
+                    return None 
+            return current
+        except Exception as e:
+            logger.error(f"Error resolving path '{path}': {e}")
+            return None
+
+    def execute_node(self, node: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         node_id = node.get('id')
         data = node.get('data', {})
-        node_type = data.get('type')
+        
+        # Debug context content
+        # logger.info(f"Context available for {node_id}: {list(context.keys())}") 
+        # logger.info(f"Full Context: {context}")
+
+        resolved_data = self._resolve_variables(data, context)
+        node_type = resolved_data.get('type')
         if not node_type:
-             # Fallback if type is at top level
              node_type = node.get('type', 'unknown')
 
         logger.info(f"Executing node: {node_id} (Type: {node_type})")
         
         try:
             if node_type == 'telegram-api':
-                return self._execute_telegram(node_id, data)
+                return self._execute_telegram(node_id, resolved_data)
             elif node_type == 'gemini':
-                return self._execute_gemini(node_id, data)
+                return self._execute_gemini(node_id, resolved_data)
             elif node_type == 'email-send' or node_type == 'gmail':
-                 return self._execute_email(node_id, data)
+                 return self._execute_email(node_id, resolved_data)
             elif node_type == 'MANUAL':
                  return {"node_id": node_id, "status": "success", "output": "Manual trigger executed"}
             else:
@@ -151,14 +217,14 @@ class WorkflowExecutor:
         logger.info(f"Executing Gemini node {node_id}")
         config = data.get('config', {})
         prompt = config.get('prompt')
-        model = config.get('model', 'gemini-pro') 
+        model = config.get('model', 'gemini-flash-latest')
 
         if not prompt:
-             raise ValueError("Gemini node missing 'prompt' in config")
+            raise ValueError("Gemini node missing 'prompt' in config")
 
         cred = get_credential_by_platform(self.db, self.user_id, "gemini")
         if not cred:
-             raise ValueError("No Gemini credentials found for user")
+            raise ValueError("No Gemini credentials found for user")
 
         if isinstance(cred.data, dict):
             api_key = cred.data.get('apiKey')
@@ -170,9 +236,21 @@ class WorkflowExecutor:
                 raise ValueError("Gemini credential invalid: data format error")
 
         if not api_key:
-             raise ValueError("Gemini credential invalid: missing 'apiKey'")
-             
-        if model == 'gemini2': model = 'gemini-pro'
+            raise ValueError("Gemini credential invalid: missing 'apiKey'")
+        
+        model_mapping = {
+            'gemini2': 'gemini-2.5-flash',
+            'gemini-pro': 'gemini-pro-latest',
+            'gemini-flash': 'gemini-flash-latest',
+            'gemini-1.5-flash-latest': 'gemini-flash-latest',
+            'gemini-1.5-pro-latest': 'gemini-pro-latest'
+        }
+        
+        model = model_mapping.get(model, model)
+        
+        # Fallback to a valid default if empty
+        if not model:
+            model = 'gemini-flash-latest'
         
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
         
@@ -182,14 +260,31 @@ class WorkflowExecutor:
             }]
         }
         
-        resp = requests.post(url, json=payload, timeout=30)
-        resp.raise_for_status()
-        
-        return {
-            "node_id": node_id,
-            "status": "success",
-            "output": resp.json()
-        }
+        try:
+            resp = requests.post(url, json=payload, timeout=30)
+            resp.raise_for_status()
+            
+            response_json = resp.json()
+            generated_text = response_json['candidates'][0]['content']['parts'][0]['text']
+            return {
+                "node_id": node_id,
+                "status": "success",
+                "output": {
+                    "text": generated_text,
+                    "raw": response_json
+                }
+            }
+        except (KeyError, IndexError) as e:
+            logger.error(f"Failed to parse Gemini response: {e}")
+            return {
+                "node_id": node_id,
+                "status": "success",
+                "output": resp.json()
+            }
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Gemini API request failed: {e}")
+            raise
+
 
     def _execute_email(self, node_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         logger.info(f"Executing Email node {node_id}")
@@ -253,8 +348,10 @@ class WorkflowExecutor:
 
         for node in execution_order:
             try:
-                result = self.execute_node(node)
+                result = self.execute_node(node, context)
                 results[node['id']] = result
+                # Update context for subsequent nodes
+                context[node['id']] = result
                 
                 if result.get("status") == "failed":
                     logger.error(f"Node {node['id']} failed. Stopping execution.")
