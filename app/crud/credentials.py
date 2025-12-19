@@ -50,3 +50,9 @@ def delete_credential(db: Session, credential_id: str, user_id: str):
     db.delete(credential)
     db.commit()
     return True
+
+def get_credential_by_platform(db: Session, user_id: str, platform: str):
+    return db.query(Credential).filter(
+        Credential.user_id == user_id,
+        Credential.platform == platform
+    ).first()

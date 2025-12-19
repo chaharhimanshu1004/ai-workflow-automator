@@ -6,6 +6,7 @@ from app.schemas.workflow import WorkflowOut, WorkflowBase, UpdateWorkflow
 from app.api.deps import get_db
 from app.crud import workflow as crud_workflow
 from app.core.security import get_current_user
+from app.core.execution_engine import WorkflowExecutor
 
 router = APIRouter(prefix="/workflow")
 
@@ -164,3 +165,13 @@ def delete_workflow_by_id(
     if not deleted:
         raise HTTPException(status_code=404, detail="Workflow not found or not authorized")
     return {"detail": "Workflow deleted successfully"}
+
+@router.post("/{workflow_id}/execute")
+def execute_workflow(
+    workflow_id: str,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user)
+):
+    executor = WorkflowExecutor(workflow_id=workflow_id, user_id=user_id, db=db)
+    result = executor.execute()
+    return result
