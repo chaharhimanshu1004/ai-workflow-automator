@@ -301,36 +301,48 @@ class WorkflowExecutor:
         cred = get_credential_by_platform(self.db, self.user_id, "gmail")
         if not cred:
              raise ValueError("No Gmail credentials found for user")
-             
+        
+        cred_data = {}
         if isinstance(cred.data, dict):
-             sender_email = cred.data.get('email')
-             app_password = cred.data.get('password')
+             cred_data = cred.data
         else:
              try:
                  cred_data = json.loads(cred.data)
-                 sender_email = cred_data.get('email')
-                 app_password = cred_data.get('password')
              except (json.JSONDecodeError, TypeError):
                  raise ValueError("Gmail credential invalid: data format error")
+
+        access_token = cred_data.get('access_token')
         
-        if not sender_email or not app_password:
-             raise ValueError("Gmail credential invalid: missing 'email' or 'password'")
+        if not access_token:
+             raise ValueError("Gmail credential invalid: missing 'access_token'. Only OAuth2 is supported.")
 
         msg = MIMEMultipart()
-        msg['From'] = sender_email
         msg['To'] = recipient
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
-
-        # Standard Gmail SMTP
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(sender_email, app_password)
-            server.send_message(msg)
+        
+        # Use Gmail API
+        url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        import base64
+        raw_msg = base64.urlsafe_b64encode(msg.as_bytes()).decode('utf-8')
+        payload = {"raw": raw_msg}
+        
+        resp = requests.post(url, headers=headers, json=payload, timeout=30)
+        try:
+            resp.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Gmail API error: {resp.text}")
+            raise ValueError(f"Gmail API error: {resp.text}")
 
         return {
-            "node_id": node_id,
-            "status": "success",
-            "output": f"Email sent to {recipient}"
+        "node_id": node_id,
+        "status": "success",
+        "output": f"Email sent via Gmail API to {recipient}. Resp: {resp.json().get('id')}"
         }
 
     def execute(self) -> Dict[str, Any]:
