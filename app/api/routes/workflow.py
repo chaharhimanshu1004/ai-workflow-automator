@@ -124,8 +124,8 @@ def get_action_types():
                     "label": "Model",
                     "required": True,
                     "options": [
-                        { "label": "Gemini-2", "value": "gemini2" },
-                        { "label": "Gemini-2.5", "value": "gemini2.5" }
+                        { "label": "Gemini-2.5 Flash", "value": "gemini-2.5-flash" },
+                        { "label": "Gemini-3", "value": "gemini-2.5-pro" }
                     ],
                     "key": "model"
                 }

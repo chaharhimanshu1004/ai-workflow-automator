@@ -11,6 +11,8 @@ from app.crud.credentials import get_credential_by_platform
 import json
 import re
 
+from app.core.constants import NODES_WITH_OUTPUT
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -107,6 +109,11 @@ class WorkflowExecutor:
                 
                 # If the entire string is just the variable, return the type-preserved value
                 if value == f"{{{{{match}}}}}":
+                    if isinstance(resolved_val, dict):
+                         if 'text' in resolved_val:
+                             return resolved_val['text']
+                         elif 'output' in resolved_val:
+                             return resolved_val['output']
                     return resolved_val
                 
                 # Smart Stringification for interpolation
@@ -152,10 +159,6 @@ class WorkflowExecutor:
     def execute_node(self, node: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         node_id = node.get('id')
         data = node.get('data', {})
-        
-        # Debug context content
-        # logger.info(f"Context available for {node_id}: {list(context.keys())}") 
-        # logger.info(f"Full Context: {context}")
 
         resolved_data = self._resolve_variables(data, context)
         node_type = resolved_data.get('type')
@@ -217,7 +220,7 @@ class WorkflowExecutor:
         logger.info(f"Executing Gemini node {node_id}")
         config = data.get('config', {})
         prompt = config.get('prompt')
-        model = config.get('model', 'gemini-flash-latest')
+        model = config.get('model', 'gemini-2.5-flash')
 
         if not prompt:
             raise ValueError("Gemini node missing 'prompt' in config")
@@ -239,18 +242,17 @@ class WorkflowExecutor:
             raise ValueError("Gemini credential invalid: missing 'apiKey'")
         
         model_mapping = {
-            'gemini2': 'gemini-2.5-flash',
-            'gemini-pro': 'gemini-pro-latest',
-            'gemini-flash': 'gemini-flash-latest',
-            'gemini-1.5-flash-latest': 'gemini-flash-latest',
-            'gemini-1.5-pro-latest': 'gemini-pro-latest'
+            'gemini-2.5-flash': 'gemini-2.5-flash',
+            'gemini-2.5-pro': 'gemini-2.5-flash', # temperory -> because pro model gives 429 too many requests
         }
         
         model = model_mapping.get(model, model)
+
+        print(model)
         
         # Fallback to a valid default if empty
         if not model:
-            model = 'gemini-flash-latest'
+            model = 'gemini-2.5-flash'
         
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
         
@@ -348,10 +350,18 @@ class WorkflowExecutor:
 
         for node in execution_order:
             try:
+                # Resolve variables before execution using the current context
                 result = self.execute_node(node, context)
                 results[node['id']] = result
-                # Update context for subsequent nodes
-                context[node['id']] = result
+                
+                # Update context for subsequent nodes ONLY if this node type produces output
+                node_data = node.get('data', {})
+                node_type = node_data.get('type')
+                if not node_type:
+                     node_type = node.get('type', 'unknown')
+
+                if node_type in NODES_WITH_OUTPUT:
+                    context[node['id']] = result
                 
                 if result.get("status") == "failed":
                     logger.error(f"Node {node['id']} failed. Stopping execution.")
