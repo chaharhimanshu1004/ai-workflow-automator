@@ -11,7 +11,7 @@ from app.crud.credentials import get_credential_by_platform
 import json
 import re
 
-from app.core.constants import NODES_WITH_OUTPUT
+from app.core.constants import NODES_WITH_OUTPUT, TELEGRAM_API_URL, GEMINI_API_URL, GMAIL_API_URL
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -138,9 +138,6 @@ class WorkflowExecutor:
             return value
 
     def _get_value_from_context(self, path: str, context: Dict[str, Any]) -> Any:
-        """
-        Traverses the dot-separated path in the context dictionary.
-        """
         parts = path.split('.')
         current = context
         
@@ -201,7 +198,7 @@ class WorkflowExecutor:
         if not token:
              raise ValueError("Telegram credential invalid: missing 'botToken'")
 
-        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        url = TELEGRAM_API_URL.format(token=token)
         payload = {
             "chat_id": chat_id,
             "text": message
@@ -254,7 +251,7 @@ class WorkflowExecutor:
         if not model:
             model = 'gemini-2.5-flash'
         
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+        url = GEMINI_API_URL.format(model=model, api_key=api_key)
         
         payload = {
             "contents": [{
@@ -322,7 +319,7 @@ class WorkflowExecutor:
         msg.attach(MIMEText(body, 'plain'))
         
         # Use Gmail API
-        url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+        url = GMAIL_API_URL
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json"
