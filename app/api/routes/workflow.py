@@ -41,13 +41,7 @@ def get_trigger_types():
             "label": 'Manual Trigger',
             "color": '#10B981',
             "description": 'Triggered manually by the user',
-        },
-        {
-            "id": 'FORM',
-            "label": 'Form Submission',
-            "color": '#3B82F6',
-            "description": 'Triggered when a form is submitted',
-        },
+        }
     ]
     return trigger_types
 
