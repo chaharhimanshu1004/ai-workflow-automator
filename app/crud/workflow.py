@@ -63,3 +63,12 @@ def delete_workflow(db: Session, workflow_id: str, user_id: str):
     db.commit()
     return True
 
+def update_workflow_title(db: Session, workflow_id: str, user_id: str, title: str):
+    workflow = db.query(Workflow).filter_by(id=workflow_id, user_id=user_id).first()
+    if not workflow:
+        return None
+    workflow.title = title
+    db.commit()
+    db.refresh(workflow)
+    return workflow
+

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+from fastapi import Body
 
 from app.schemas.workflow import WorkflowOut, WorkflowBase, UpdateWorkflow
 from app.api.deps import get_db
@@ -169,3 +170,23 @@ def execute_workflow(
     executor = WorkflowExecutor(workflow_id=workflow_id, user_id=user_id, db=db)
     result = executor.execute()
     return result
+
+@router.patch("/{workflow_id}", response_model=WorkflowOut)
+def patch_workflow_title(
+    workflow_id: str,
+    data: dict = Body(...),
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user)
+):
+    title = data.get("title")
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    updated_workflow = crud_workflow.update_workflow_title(
+        db=db,
+        workflow_id=workflow_id,
+        user_id=user_id,
+        title=title
+    )
+    if not updated_workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found or not authorized")
+    return updated_workflow
