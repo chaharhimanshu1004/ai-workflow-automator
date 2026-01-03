@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     GMAIL_CLIENT_SECRET: str
     GMAIL_REDIRECT_URI: str
     
+    CORS_ORIGINS: str 
 
     class Config:
         env_file = ".env"
