@@ -86,6 +86,13 @@ def get_action_types():
                     "key": "to"
                 },
                 {
+                    "type": "email",
+                    "label": "CC",
+                    "placeholder": "cc@example.com",
+                    "required": False,
+                    "key": "cc"
+                },
+                {
                     "type": "text",
                     "label": "Subject",
                     "placeholder": "Email subject",

@@ -291,6 +291,7 @@ class WorkflowExecutor:
         recipient = config.get('to')
         subject = config.get('subject')
         body = config.get('body')
+        cc = config.get('cc')
 
         if not recipient or not subject or not body:
              raise ValueError("Email node missing 'to', 'subject', or 'body'")
@@ -315,6 +316,9 @@ class WorkflowExecutor:
 
         msg = MIMEMultipart()
         msg['To'] = recipient
+        if cc:
+            msg['Cc'] = cc
+
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
         
